@@ -41,8 +41,11 @@
 clear
 echo "========== BEGIN $0 ==========="; date
 LOGFILE=$1
+
 KPIOUTPUTFILE=/tmp/modem-kpis-$(date "+%Y%m%d-%H%M%S")
 GPSOUTPUTFILE=/tmp/modem-gps-$(date "+%Y%m%d-%H%M%S")
+MISCOUTPUTFILE=/tmp/modem-misc-$(date "+%Y%m%d-%H%M%S")
+
 KPIHEADER="date,device,subdevice,technology,RSRP/RSSI,RX bytes,TX bytes"
 GPSHEADER="date,device,longitude,latitude,altitude"
 
@@ -52,7 +55,7 @@ echo $GPSHEADER > $GPSOUTPUTFILE
 ######### Common Functions #####
 
 # For a data field, it must have the word Technology in it
-cat $1 | grep -E "Technology|GPS" | awk -v GPSOUTPUTFILE="$GPSOUTPUTFILE" '
+cat $1 | awk -v GPSOUTPUTFILE="$GPSOUTPUTFILE" -v MISCOUTPUTFILE="$MISCOUTPUTFILE" '
 
 function printit() {
 # print the values
@@ -69,11 +72,11 @@ device=$4
 
 #KPI vars
 gsub (":","",$5);subdevice=$5
-gsub ("[\.,]","",$7);technology=$7
+technology=$7;gsub ("[\.,]","",technology);
 
 # for LTE data, 
 if ( technology == "lte" ) {
-	RSRP=$9 
+	RSRP=$9
 	gsub ("bytes:","",$12);RXbytes=$12
 	gsub ("bytes:","",$16);TXbytes=$16
 	printit()
@@ -105,6 +108,10 @@ else if ( subdevice == "GPS" ) {
 	printf("%s,%s,%s,%s,%s\n",date,device,longitude,latitude,altitude) >> GPSOUTPUTFILE
 	date=device=longitude=latitude=altitude=""
 } #end elseif
+else {
+# entries were not KPI and not GPS so just dumping them in misc
+	print $0 >> MISCOUTPUTFILE
+}
 
 
 }' >> $KPIOUTPUTFILE
@@ -115,3 +122,7 @@ head $KPIOUTPUTFILE
 echo
 echo "GSP results are stored in: $GPSOUTPUTFILE"
 head $GPSOUTPUTFILE
+
+echo
+echo "MISC results are stored in: $MISCOUTPUTFILE, (non KPI/GPS entries)
+head $MISCOUTPUTFILE
