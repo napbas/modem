@@ -1,6 +1,6 @@
 ###############################################################################
 #                                                                             #
-#  This script parses data from the mode								      #
+#  This script parses data from the modem				      #
 #                                                                             #
 #                              Version 1.0                                    #
 #                                 April 2021                                  #
