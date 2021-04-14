@@ -124,5 +124,5 @@ echo "GSP results are stored in: $GPSOUTPUTFILE"
 head $GPSOUTPUTFILE
 
 echo
-echo "MISC results are stored in: $MISCOUTPUTFILE, (non KPI/GPS entries)
+echo "MISC results are stored in: $MISCOUTPUTFILE, (non KPI/GPS entries)"
 head $MISCOUTPUTFILE
