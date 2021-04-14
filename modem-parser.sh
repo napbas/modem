@@ -35,17 +35,24 @@
 #cat BAI-T201-AC1-TRX01.log |grep Technology |grep OutOfCall|wc -l             
 #1
 
+#################### GPS data
+#Jan  5 23:06:23 BAI-T201-AC1-TRX01 GPS: 39.98976, -75.17213, Altitude: 37.4m
+
 clear
 echo "========== BEGIN $0 ==========="; date
 LOGFILE=$1
-OUTPUTFILE=/tmp/results-$(date "+%Y%m%d-%H%M%S")
-HEADER="Date,Device,Subdevice,technology,RSRP/RSSI,RX bytes,TX Bytes"
-echo $HEADER > $OUTPUTFILE
+KPIOUTPUTFILE=/tmp/modem-kpis-$(date "+%Y%m%d-%H%M%S")
+GPSOUTPUTFILE=/tmp/modem-gps-$(date "+%Y%m%d-%H%M%S")
+KPIHEADER="date,device,subdevice,technology,RSRP/RSSI,RX bytes,TX bytes"
+GPSHEADER="date,device,longitude,latitude,altitude"
+
+echo $KPIHEADER > $KPIOUTPUTFILE
+echo $GPSHEADER > $GPSOUTPUTFILE
 
 ######### Common Functions #####
 
 # For a data field, it must have the word Technology in it
-cat $1 | grep Technology | awk '
+cat $1 | grep -E "Technology|GPS" | awk -v GPSOUTPUTFILE="$GPSOUTPUTFILE" '
 
 function printit() {
 # print the values
@@ -56,8 +63,11 @@ function printit() {
 
 #MAIN Awk
 {
+# Setting common variables for each log entry
 date=$1" "$2" "$3
 device=$4
+
+#KPI vars
 gsub (":","",$5);subdevice=$5
 gsub ("[\.,]","",$7);technology=$7
 
@@ -68,7 +78,7 @@ if ( technology == "lte" ) {
 	gsub ("bytes:","",$16);TXbytes=$16
 	printit()
 }
-
+# for wcdma data
 else if (technology == "wcdma" ) {
 	# hunt for the RSSI field as it could be in multiple places
 	for (i=8; i<=NF; i++ ) {
@@ -83,10 +93,25 @@ else if (technology == "wcdma" ) {
 			printit()
 		} #if end
 	} #for end
-} #if end
+} #else if end
+else if ( subdevice == "GPS" ) {
+	# enter the GPS coordinates #Jan  5 23:06:23 BAI-T201-AC1-TRX01 GPS: 39.98976, -75.17213, Altitude: 37.4m
+	gsub (",","",$6);longitude=$6
+	gsub (",","",$7);latitude=$7
+	gsub ("m","",$9);altitude=$9
+	# Rewrite in case of weak GPS signal
+	#Jan  5 23:12:42 BAI-T201-AC1-TRX01 GPS: GPS coordinates not found: Weak Signal
+	if ( longitude == "GPS") { longitude=latitude=altitude="weak signal" }
+	printf("%s,%s,%s,%s,%s\n",date,device,longitude,latitude,altitude) >> GPSOUTPUTFILE
+	date=device=longitude=latitude=altitude=""
+} #end elseif
 
 
-}' >> $OUTPUTFILE
+}' >> $KPIOUTPUTFILE
 
-echo "All results are stored in: $OUTPUTFILE"
-head $OUTPUTFILE
+echo "KPI results are stored in: $KPIOUTPUTFILE"
+head $KPIOUTPUTFILE
+
+echo
+echo "GSP results are stored in: $GPSOUTPUTFILE"
+head $GPSOUTPUTFILE
